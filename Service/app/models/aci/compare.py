@@ -146,6 +146,13 @@ class Compare(Rest):
             between comparision, then set remap to False.
             """,
         },
+        "ignore_new_attributes": {
+            "type": bool,
+            "default": True,
+            "description": """
+                Ignore added mo attributes. This is especially usefull after SW upgrades. If you want the old behavior and see added attributes in as object modifications, then untick this.
+            """,
+        },        
         "serialize": {
             "type": bool,
             "default": False,
@@ -654,7 +661,8 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
     if not compare.statistic and "statistic" in mo["labels"]:
         logger.debug("%s filtered by statistic-disabled option", mo["classname"])
         return
-
+    
+    
     # get list of objects
     s1_objects = Remap.get_object_attributes(file1, mo["classname"])
     s2_objects = Remap.get_object_attributes(file2, mo["classname"])
@@ -779,6 +787,9 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
             
             # assume match before starting comparison    
             match = True
+
+            # assume we do not have an sw upgrade
+            attribute_not_found=False
            
             # process attribute values as ordered list
             if attr_list:
@@ -837,14 +848,19 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
                 })
             # highlight diff on mismatch
             else:
-                logger.debug("%s attribute mismatch %s != %s", a, v1, v2)
-                diff["modified"].append({
-                    "attribute": a,
-                    "value1": s1[k].get(a, ""),
-                    "value2": s2[k].get(a, ""),
-                    "map_value1": v1,
-                    "map_value2": v2
-                })
+                
+                if attribute_not_found and compare.ignore_new_attributes:
+                    logger.debug("attribute %s not found in s1 and ignore_new_attributes set -> skipping attribute for diff", a)
+                    pass
+                else:
+                    logger.debug("%s attribute mismatch %s != %s", a, v1, v2)
+                    diff["modified"].append({
+                        "attribute": a,
+                        "value1": s1[k].get(a, ""),
+                        "value2": s2[k].get(a, ""),
+                        "map_value1": v1,
+                        "map_value2": v2
+                    })
 
         # if diffs are present then object was modified
         if len(diff["modified"])==0:
