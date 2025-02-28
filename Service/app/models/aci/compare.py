@@ -837,6 +837,7 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
                 if a not in s1[k]:
                     logger.debug("%s attribute %s not found in s1", mo["classname"], a)
                     match = False
+                    attribute_not_found=True
                 elif v1!= v2:
                     match = False
             
