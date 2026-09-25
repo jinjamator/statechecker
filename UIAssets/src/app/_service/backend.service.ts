@@ -45,6 +45,12 @@ export class BackendService {
     return this.http.post(this.baseUrl + 'users/logout', {});
   }
 
+  // Who the current session belongs to. A session can start outside the login
+  // form (Synaptic portal single sign-on), so the server is asked, not storage.
+  getSession(): Observable<any> {
+    return this.http.get(this.baseUrl + 'session');
+  }
+
   getUsers(): Observable<UserList> {
     const options = {
       params: new HttpParams().set('sort', 'username|asc')

@@ -21,6 +21,10 @@ What differs from upstream:
 - Cookies are named `statechecker_*` and scoped by `APP_PATH`, so they do not
   collide with other apps on the same origin.
 - `MONGO_USERNAME` and `MONGO_PASSWORD`, when set, authenticate to MongoDB.
+- Single sign-on from the Synaptic portal (`SSO_ENABLED`, `Service/app/models/sso.py`):
+  `POST /api/sso/login` with the portal bearer token, checked against the
+  portal's `/api/aaa/whoami`. `GET /api/session` lets the UI recognise a session
+  it did not start itself. Usernames may contain `-`, `@` and `+`.
 
 MongoDB 8.0 refuses to start on Linux 6.19 or newer, and 8.2 crashes there
 (SERVER-121912); the product pins 7.0.

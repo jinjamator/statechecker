@@ -39,5 +39,7 @@ status "running"
 # Snapshots and comparisons run in background processes of their own, so the
 # web side stays small: two processes, eight threads each. Sessions live in
 # MongoDB, so any process can serve any request. A long timeout for uploads.
-exec gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 300 \
+# --no-control-socket: gunicorn 26 otherwise opens one under $HOME, which the
+# app user cannot write, and logs a permission error on every start.
+exec gunicorn --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 300 --no-control-socket \
     --forwarded-allow-ips '*' --access-logfile - --error-logfile - wsgi:application

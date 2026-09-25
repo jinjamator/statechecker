@@ -61,15 +61,41 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       this.app_status = 'Starting App Components';
     }
+    // Loaded once the app status AND the session are known, so neither the
+    // login form nor an empty page flashes up first.
+    let status_known = !this.wait_for_status;
+    let session_known = !(environment.login_required && !this.app_mode);
+    const ready = () => { this.app_loaded = status_known && session_known; };
     if (this.wait_for_status) {
       this.backendService.getAppStatus().subscribe((response) => {
-        this.app_loaded = true;
+        status_known = true;
+        ready();
       }, (error) => {
         this.app_status = error['error'];
       });
-    } else {
-      this.app_loaded = true;
     }
+    if (!session_known) {
+      // The server says who is signed in, not localStorage: a session can come
+      // from the Synaptic portal's single sign-on, and localStorage is shared by
+      // everything on this origin, so it may still name an earlier user.
+      this.backendService.getSession().subscribe((s) => {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userName', s['username']);
+        localStorage.setItem('userRole', String(s['role']));
+        this.login_required = false;
+        session_known = true;
+        ready();
+      }, () => {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        this.login_required = true;
+        session_known = true;
+        ready();
+        this.router.navigate(['login']);
+      });
+    }
+    ready();
     if (environment.login_required) {
       this.backendService.getUsers().subscribe((results: UserList) => {
       });

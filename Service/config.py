@@ -109,6 +109,22 @@ REMEMBER_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = bool(int(os.environ.get("COOKIE_SECURE", 0)))
 REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
 
+# Single sign-on from the Synaptic portal (app/models/sso.py). Off unless
+# enabled: upstream's standalone app has no portal to ask.
+SSO_ENABLED = bool(int(os.environ.get("SSO_ENABLED", 0)))
+# The portal that validates a bearer token, as a BASE url; the path is appended
+# here so an empty value means "this appliance's engine", never a half URL.
+# On a distributed node it is MAIN's engine: the session was issued there.
+_sso_base = os.environ.get("SSO_PORTAL_BASE", "").strip().rstrip("/")
+SSO_INTROSPECTION_URL = (_sso_base or "http://cortex-engine:5000") + "/api/aaa/whoami"
+SSO_VERIFY_TLS = bool(int(os.environ.get("SSO_VERIFY_TLS", 1)))
+SSO_TIMEOUT = int(os.environ.get("SSO_TIMEOUT", 10))
+# Portal roles, comma separated. SSO_ADMIN_ROLES make a StateChecker admin;
+# SSO_USER_ROLES, when set, are required of everyone else (empty: any portal
+# user who can reach StateChecker becomes a StateChecker user).
+SSO_ADMIN_ROLES = os.environ.get("SSO_ADMIN_ROLES", "administrator")
+SSO_USER_ROLES = os.environ.get("SSO_USER_ROLES", "")
+
 # the built UI (see views/base.py)
 UI_DIR = os.environ.get("UI_DIR", "/home/app/src/UIAssets")
 

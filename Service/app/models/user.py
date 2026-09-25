@@ -36,7 +36,9 @@ class User(Rest):
         "username":{
             "key": True,
             "type": str,
-            "regex": r"(?i)^[a-z0-9_.:]{1,128}$",
+            # "-", "@" and "+" for names that arrive through the Synaptic portal
+            # (OIDC usernames are often e-mail addresses)
+            "regex": r"(?i)^[a-z0-9_.:@+-]{1,128}$",
             "default": "",
             "description": "user username",
         },
@@ -54,6 +56,12 @@ class User(Rest):
             "min": Role.MIN_ROLE,
             "max": Role.MAX_ROLE,
             "description": "user role used for role-based authentication",
+        },
+        "sso": {
+            "type": bool,
+            "default": False,
+            "write": False,
+            "description": "provisioned by Synaptic single sign-on; signs in through the portal only",
         },
         "last_login": {
             "type": float,
@@ -110,26 +118,35 @@ class User(Rest):
             # do not allow login for blacklist users
             if u.role == Role.BLACKLIST:
                 abort(403, MSG_403)
+            # single sign-on accounts have no password anyone knows; refused
+            # here too, so a password set later cannot open a second way in
+            if u.sso:
+                abort(401, "Authentication Failed")
             try:
                 if check_password_hash(u.password, password):
-                    u.last_login = time.time()
-                    u.save()
-                    # create a new session for user
-                    sid = base64.b64encode(os.urandom(64)).decode("ascii")
-                    s = Session(username=u.username, role=u.role, session=sid, 
-                                                            token_required=token_required)
-                    if not s.save():
-                        logger.error("failed to create session for user %s", u.username)
-                    login_user(s, remember=True)
-                    if token_required:
-                        return jsonify({"success": True, "token": s.token})
-                    else:
-                        return User.api_ok()
+                    return User.start_session(u, token_required=token_required)
             except Exception as e:
                 logger.error("check_password_hash failed: %s", e)
         else:
             logger.debug("username %s does not exist", username)
         abort(401, "Authentication Failed")
+
+    @staticmethod
+    def start_session(u, token_required=False):
+        """ record the login and start a session for user object u (password
+            login and single sign-on share this)
+        """
+        u.last_login = time.time()
+        u.save()
+        sid = base64.b64encode(os.urandom(64)).decode("ascii")
+        s = Session(username=u.username, role=u.role, session=sid,
+                                                token_required=token_required)
+        if not s.save():
+            logger.error("failed to create session for user %s", u.username)
+        login_user(s, remember=True)
+        if token_required:
+            return jsonify({"success": True, "token": s.token})
+        return User.api_ok()
 
     @api_route(path="pwreset", methods=["GET"], role=Role.USER)
     def get_password_reset_key(self):
@@ -139,6 +156,8 @@ class User(Rest):
         # non-admins can only get a pwreset link for thier account
         if g.user.role != Role.FULL_ADMIN and self.username != g.user.username:
             abort(403, MSG_403)
+        if self.sso:
+            abort(400, "%s signs in through the Synaptic portal and has no password" % self.username)
 
         # create a temporary random key and timestamp it
         self.password_reset_key = "%s"%uuid.uuid4()
