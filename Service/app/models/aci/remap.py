@@ -78,7 +78,9 @@ class Remap(object):
         """ remap provided value according remap selectors 
 
         """
-        if len(mo_remaps)==0: return value
+        # a disabled Remap (the compare's "remap" option off) has no tables;
+        # looking one up raised KeyError and failed the whole comparison
+        if self.disabled or len(mo_remaps)==0: return value
         dmsg = "remap %s to " % value
         allset = "all" in mo_remaps
         #logger.debug("remap(%s) %s" , mo_remaps, value)

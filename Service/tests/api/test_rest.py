@@ -3,6 +3,7 @@ test generic rest object implementation
 """
 from werkzeug.exceptions import (NotFound, BadRequest)
 from app.models.rest import (Rest, api_register)
+from app.models.utils import get_db
 import logging, json
 import pytest
 
@@ -130,7 +131,7 @@ def assert_not_found(fn, *args, **kwargs):
 def rest_cleanup(request, app):
     # drop test.rest (objects for Rest_TestClass) and dnyamic.test for Dynamic_Test objects
     def teardown():
-        db = app.db
+        db = get_db()  # not app.db: test_proxy rebinds it on the shared app
         db.test.rest.drop()
         db.test.secure.drop()
         db.dynamic.test.drop()
@@ -984,7 +985,7 @@ def test_rest_encrypt_attribute(app, rest_cleanup):
     assert t.save()
 
     # perform db read and ensure value is encrypted
-    ret = app.db.test.secure.find({"key":"key1"})
+    ret = get_db().test.secure.find({"key":"key1"})
     obj = None
     for o in ret:
         obj = o
