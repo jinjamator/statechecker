@@ -17,7 +17,24 @@ def base_redirect():
     from ..models.app_status import AppStatus
     (ready, status) = AppStatus.check_status()
     if not ready: return abort(503, status)
-    return redirect("/UIAssets/", code=302)
+    # relative: behind a proxy that strips /statechecker/ (or /<node>/statechecker/)
+    # the app never sees its prefix, and an absolute path would leave it
+    return redirect("UIAssets/", code=302)
+
+# The built UI, served by the app itself (Apache served it before). Hashed
+# bundles never change under one name; index.html must be re-read to pick up
+# a new build.
+@base.route("/UIAssets")
+def ui_assets_slash():
+    return redirect("UIAssets/", code=302)
+
+@base.route("/UIAssets/", defaults={"path": "index.html"})
+@base.route("/UIAssets/<path:path>")
+def ui_assets(path):
+    response = send_from_directory(current_app.config["UI_DIR"], path)
+    if path == "index.html":
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 ##############################################################################
 # proxy API, imported by api module

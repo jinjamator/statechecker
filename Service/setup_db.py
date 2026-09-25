@@ -36,7 +36,7 @@ def get_gateway():
     try:    
         logger.debug("cmd: %s" % cmd)
         out = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
-        out = out.strip().split("\n")   # may be multiple default routes
+        out = out.decode("utf-8", errors="replace").strip().split("\n")   # may be multiple default routes
         if len(out)>0: 
             logger.debug("default gateway: [%s]" % out[0])
             return out[0]

@@ -62,6 +62,9 @@ if os.path.exists(version_file):
 MONGO_HOST = os.environ.get("MONGO_HOST", "localhost")
 MONGO_PORT = int(os.environ.get("MONGO_PORT", 27017))
 MONGO_DBNAME = os.environ.get("MONGO_DBNAME","devdb")
+MONGO_USERNAME = os.environ.get("MONGO_USERNAME", "")
+MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD", "")
+MONGO_AUTH_SOURCE = os.environ.get("MONGO_AUTH_SOURCE", "admin")
 MONGO_SERVER_SELECTION_TIMEOUT_MS = 5000
 MONGO_CONNECT_TIMEOUT_MS = 5000
 MONGO_SOCKET_TIMEOUT_MS = 20000
@@ -81,9 +84,33 @@ DEFAULT_USERNAME = os.environ.get("DEFAULT_USERNAME", "admin")
 DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD", "cisco")
 PROXY_URL = os.environ.get("PROXY_URL", "http://127.0.0.1:80/")
 ENABLE_CORS = bool(int(os.environ.get("ENABLE_CORS",0)))
-SECRET_KEY = os.environ.get("SECRET_KEY", "fdcb1c2c9ecbf13d4ae8776f7af13cc5")
-EKEY = os.environ.get("EKEY", "4e6d7a92fbbcf2c40c8d629a60b515f1")
-EIV  = os.environ.get("EIV", "5bb0f66133e6ac8c96af39bcd570b615")
+# One installation secret, from which the three below are derived when they
+# are not set on their own. The upstream defaults are public, and with them
+# every installation would share a session key and the AES key that encrypts
+# the stored APIC and SSH passwords. EKEY and EIV must be 32 hex characters.
+import hashlib as _hashlib
+_SECRET = os.environ.get("STATECHECKER_SECRET", "")
+def _derived(label, default):
+    if not _SECRET: return default
+    return _hashlib.sha256(("%s:%s" % (label, _SECRET)).encode()).hexdigest()[:32]
+SECRET_KEY = os.environ.get("SECRET_KEY") or _derived("secret_key", "fdcb1c2c9ecbf13d4ae8776f7af13cc5")
+EKEY = os.environ.get("EKEY") or _derived("ekey", "4e6d7a92fbbcf2c40c8d629a60b515f1")
+EIV  = os.environ.get("EIV") or _derived("eiv", "5bb0f66133e6ac8c96af39bcd570b615")
+
+# Cookies of their own. The app is served from the same origin as other apps
+# (the Synaptic portal is Flask too), where "session" and "remember_token"
+# would overwrite theirs. APP_PATH scopes them to this app's prefix.
+SESSION_COOKIE_NAME = os.environ.get("SESSION_COOKIE_NAME", "statechecker_session")
+REMEMBER_COOKIE_NAME = os.environ.get("REMEMBER_COOKIE_NAME", "statechecker_remember")
+SESSION_COOKIE_PATH = os.environ.get("APP_PATH", "/")
+REMEMBER_COOKIE_PATH = os.environ.get("APP_PATH", "/")
+SESSION_COOKIE_HTTPONLY = True
+REMEMBER_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = bool(int(os.environ.get("COOKIE_SECURE", 0)))
+REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+# the built UI (see views/base.py)
+UI_DIR = os.environ.get("UI_DIR", "/home/app/src/UIAssets")
 
 # logging options
 LOG_DIR = os.environ.get("LOG_DIR", "/home/app/log")

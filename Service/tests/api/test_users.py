@@ -94,7 +94,7 @@ def test_api_logout_user_with_post(app, userprep):
     }), content_type="application/json")
     assert response.status_code == 200
     # save session cookie for future call
-    old_cookie = get_cookies(c)["session"]
+    old_cookie = get_cookies(c)[app.config["SESSION_COOKIE_NAME"]]
 
     # user read should be fine
     response = c.get(class_url)

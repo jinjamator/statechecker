@@ -1,0 +1,8 @@
+.git
+UIAssets/node_modules
+UIAssets/dist
+Media
+Legal
+docs
+**/__pycache__
+**/.pytest_cache

@@ -41,10 +41,19 @@ def get_db(uniq=False, overwrite_global=False):
         db = config.get("MONGO_DBNAME", "devdb")
         if config.get("MONGO_WRITECONCERN", 0) == 0: w = 0
         else: w = 1
-        uri = "mongodb://%s:%s/%s?" % (
+        # credentials when the database requires them: on the appliance it
+        # shares a docker network with other products' containers
+        auth, source = "", ""
+        if config.get("MONGO_USERNAME"):
+            from urllib.parse import quote_plus
+            auth = "%s:%s@" % (quote_plus(config["MONGO_USERNAME"]),
+                               quote_plus(config.get("MONGO_PASSWORD", "")))
+            source = "authSource=%s&" % config.get("MONGO_AUTH_SOURCE", "admin")
+        uri = "mongodb://%s%s:%s/%s?%s" % (
+            auth,
             config.get("MONGO_HOST","localhost"),
             config.get("MONGO_PORT", 27017),
-            db
+            db, source
         )
         if "MONGO_SERVER_SELECTION_TIMEOUT_MS" in config:
             uri+= "serverSelectionTimeoutMS=%s&" % (
@@ -54,7 +63,7 @@ def get_db(uniq=False, overwrite_global=False):
         if "MONGO_SOCKET_TIMEOUT_MS" in config:
             uri+= "socketTimeoutMS=%s&" % config["MONGO_SOCKET_TIMEOUT_MS"]
         uri = re.sub("[\\?&]+$","",uri)
-        logger.debug("starting mongo connection: %s", uri)
+        logger.debug("starting mongo connection: %s", re.sub("//[^@/]*@", "//<credentials>@", uri))
         client = MongoClient(uri, w=w)
         if _g_db is None or overwrite_global: _g_db = client[db]
         return client[db]

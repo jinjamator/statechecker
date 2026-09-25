@@ -104,7 +104,7 @@ const routes: Routes = [
     KonamiModule,
     ModalModule.forRoot(),
     AccordionModule.forRoot(),
-    RouterModule.forRoot(routes),
+    RouterModule.forRoot(routes, { useHash: true }),
     NgxDatatableModule,
     SimpleNotificationsModule.forRoot(),
     TooltipModule.forRoot(),
