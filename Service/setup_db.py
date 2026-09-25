@@ -31,8 +31,8 @@ def get_gateway():
         return None on error.
     """
     logger.debug("getting default gateway")
-    cmd = "ip route | egrep -o \"default via [0-9\.]+\" "
-    cmd+= "| egrep -o \"[0-9\.]+\""
+    cmd = "ip route | egrep -o \"default via [0-9\\.]+\" "
+    cmd+= "| egrep -o \"[0-9\\.]+\""
     try:    
         logger.debug("cmd: %s" % cmd)
         out = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
@@ -124,7 +124,7 @@ def app_get_fabric_domain(hostname, apic_username, apic_cert):
                 attr = i["infraCont"]["attributes"]
                 if "fbDmNm" in attr:
                     fd = re.sub(" ","", attr["fbDmNm"])
-                    fd = re.sub("[^a-zA-Z0-9\-\.:_]","", fd)
+                    fd = re.sub("[^a-zA-Z0-9\\-\\.:_]","", fd)
                     logger.debug("fabric domain is: %s (clean: %s)" % (
                         attr["fbDmNm"], fd))
                     return fd
@@ -143,7 +143,7 @@ def db_exists():
             users, settings, aci.settings
     """
     logger.debug("checking if db exists")
-    collections = get_db().collection_names()
+    collections = get_db().list_collection_names()
     logger.debug("current collections: %s" % collections)
     if len(collections)>0 and ("users" in collections and "settings" in collections):
         return True
@@ -168,10 +168,10 @@ def db_setup(args):
         if len(pwd)==0: 
             pwd = None
         elif pwd!=pwd2:
-            print "Passwords do not match"
+            print("Passwords do not match")
             pwd = None
         elif " " in pwd:
-            print "No spaces allowed in password"
+            print("No spaces allowed in password")
             pwd = None
     
     db = get_db()

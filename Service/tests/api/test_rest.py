@@ -687,7 +687,7 @@ def test_rest_api_bulk_update(app, rest_cleanup):
     # refer to Rest_TestClass
 
     # create 5 objects with unique int values and ensure all present
-    for x in xrange(0,5):
+    for x in range(0,5):
         r = app.client.post(rest_url, data=json.dumps({
             "key": "key%s" % x,
             "int": x
@@ -727,7 +727,7 @@ def test_rest_api_bulk_delete(app, rest_cleanup):
     # refer to Rest_TestClass
 
     # create 5 objects with unique int values and ensure all present
-    for x in xrange(0,5):
+    for x in range(0,5):
         r = app.client.post(rest_url, data=json.dumps({
             "key": "key%s" % x,
             "int": x

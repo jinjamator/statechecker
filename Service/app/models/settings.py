@@ -17,7 +17,7 @@ class Settings(Rest):
         "app_name": {
             "type":str, 
             "default":"AppName",
-            "regex": "^(?i).{1,128}$",  # any 128 character string
+            "regex": "(?i)^.{1,128}$",  # any 128 character string
             "description": "application name",
         },
         "force_https":  {

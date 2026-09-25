@@ -28,11 +28,11 @@ db_version = 3
 
 # hack to determine if running mongo version 2 or 3
 try:
-    cmd = "mongo --version | egrep -o \"[0-9\.]+\" | egrep \"^2\" | wc -l"
+    cmd = "mongo --version | egrep -o \"[0-9\\.]+\" | egrep \"^2\" | wc -l"
     o = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
     if o.strip() == "1": db_version = 2
 except subprocess.CalledProcessError as e:
-    print "failed to determine mongo version: %s" % e
+    print("failed to determine mongo version: %s" % e)
 
 # setup logging
 def test_logging(logger):
@@ -60,14 +60,14 @@ from tests.api.test_rest import Rest_TestClass
 
 # test connectivity to database before starting any tests
 db = get_db()
-try: db.collection_names()
+try: db.list_collection_names()
 except Exception as e:  sys.exit("failed to connect to database")
 
 @pytest.fixture(scope="session")
 def app(request):
     # setup test database with corresponding testdata.  Returns None on error
 
-    print"\n" # separate logs from which test is running when printed during pytest
+    print("\n") # separate logs from which test is running when printed during pytest
 
     # testdata to pre-load into db, indexed by db collection name containing json file with testdata
     # or directory to scan and insert into collection

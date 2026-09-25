@@ -296,12 +296,12 @@ class Rest(object):
     _dn_attributes = [] # when dn is enabled on object, this is fmt attribute names used for dn:
                         #   ['username', 'group'] for substituting /base/uname-%s/group-%s
 
-    operator_reg= "^[ ]*(?P<op>[a-z]+)[ ]*\((?P<data>.+)\)[ ]*$" 
+    operator_reg= "^[ ]*(?P<op>[a-z]+)[ ]*\\((?P<data>.+)\\)[ ]*$" 
     operand_reg = '^(?P<delim>[ ]*,?[ ]*)('
     operand_reg+= '(?P<str>".*?(?<!\\\\)")|'
-    operand_reg+= '(?P<float>-?[0-9\.]+)|'
+    operand_reg+= '(?P<float>-?[0-9\\.]+)|'
     operand_reg+= '(?P<bool>true|false)|'
-    operand_reg+= '(?P<op>[a-z]+\()'
+    operand_reg+= '(?P<op>[a-z]+\\()'
     operand_reg+= ')'
 
     def __init__(self, **kwargs):
@@ -849,10 +849,10 @@ class Rest(object):
                 else:
                     for index, pre_v in enumerate(value):
                         # cast pre-value to attribute type allowing ValueError
-                        if subtype is str and (isinstance(pre_v, str) or \
-                            isinstance(pre_v,unicode)):
-                            # encode without casting to support utf-8 chars
-                            v = pre_v.encode('utf-8')
+                        if subtype is str and isinstance(pre_v, str):
+                            # already text: Python 2 encoded unicode to str
+                            # here, which on Python 3 would make it bytes
+                            v = pre_v
                         elif subtype is bool:
                             # support string 'True' and 'False' for bools along
                             # with int/float 1 or 0.  For any other value raise
@@ -865,7 +865,7 @@ class Rest(object):
                                 if v!=0 and v!=1: raise ValueError()
                                 v = bool(v)
                             elif isinstance(pre_v,str) or \
-                                isinstance(pre_v,unicode):
+                                isinstance(pre_v,str):
                                 pre_v = pre_v.lower()
                                 if pre_v == "true": v = True
                                 elif pre_v == "false": v = False
@@ -1089,7 +1089,7 @@ class Rest(object):
                     raise_error(fs, "received %s operands" % (len(operands)))
                 # for each operand, remove quotes if string
                 for i,o in enumerate(operands):
-                    if isinstance(o, str) or isinstance(o, unicode):
+                    if isinstance(o, str) or isinstance(o, str):
                         o = re.sub("(^\")|(\"$)","", o)
                     operands[i] = o
                 # check that operand[0] which represents an attribute exists
@@ -1110,7 +1110,14 @@ class Rest(object):
                 if operator == "eq": return { operands[0]: operands[1]}
                 elif operator == "regex":
                     # validate regex is valid 
-                    try: re.compile(operands[1])
+                    # MongoDB runs it (PCRE), which accepts a global flag
+                    # anywhere, as in "^(?i)abc". Python 3.11+ only accepts one
+                    # at the start, so hoist flag groups before checking here;
+                    # the pattern sent to MongoDB is left exactly as given.
+                    flags = "".join(re.findall(r"\(\?([aiLmsux]+)\)", operands[1]))
+                    check = re.sub(r"\(\?[aiLmsux]+\)", "", operands[1])
+                    if flags: check = "(?%s)%s" % (flags, check)
+                    try: re.compile(check)
                     except re.error as e: raise_error(fs, "%s" % e)
                 op_str = {
                     "eq": "$eq",
@@ -1440,7 +1447,7 @@ class Rest(object):
         # check for sort options
         if "sort" in _params:
             sort = []
-            reg="(?i)(?P<sort>[^|\,]+)(\|(?P<dir>[a-z]+))?(,|$)"
+            reg="(?i)(?P<sort>[^|\\,]+)(\\|(?P<dir>[a-z]+))?(,|$)"
             for match in re.finditer(reg,_params["sort"].strip()):
                 sdir= ASCENDING
                 if match.group("dir") is not None:
@@ -1463,7 +1470,9 @@ class Rest(object):
 
         # prepare return object
         ret = {
-            "count": cls.__mongo(cursor.count),
+            # every match, ignoring skip/limit - what pymongo 3's cursor.count()
+            # returned, and removed in pymongo 4
+            "count": cls.__mongo(collection.count_documents, filters or {}),
             "objects": []
         }
         
@@ -1867,11 +1876,15 @@ class Rest(object):
         """ perform mongo operation with retry """
         max_retries = 3
         retry_time = 0.25
-        for i in xrange(0, max_retries):
+        # Python 3 unbinds an except clause's name when the clause ends, so the
+        # error is kept in `last` to be re-raised after the loop.
+        last = None
+        for i in range(0, max_retries):
             try:
                 ts = time.time()
                 return func(*args, **kwargs)
             except Exception as e:
+                last = e
                 cls.logger.debug("traceback: %s", traceback.format_exc())
                 cls.logger.warn("database error: %s", e)
                 # some weird timeout bug on mongo connections - perform retry
@@ -1882,7 +1895,7 @@ class Rest(object):
                         cls.logger.debug("retrying operation in %s sec", retry_time)
                         time.sleep(retry_time)
                         continue
-            raise e
+                raise
         cls.logger.warn("out of retries")
-        raise e
+        raise last
 

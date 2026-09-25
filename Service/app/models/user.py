@@ -1,7 +1,7 @@
 
 from flask import abort, g, current_app, jsonify
 from flask_login import (login_user, logout_user)
-from utils import  MSG_403
+from .utils import  MSG_403
 from .rest import (Rest, Role, api_register, api_route, api_callback)
 from .utils import get_user_data, get_user_params, get_user_headers, get_user_cookies
 from .settings import Settings
@@ -36,7 +36,7 @@ class User(Rest):
         "username":{
             "key": True,
             "type": str,
-            "regex": "^(?i)[a-z0-9\_.:]{1,128}$",
+            "regex": r"(?i)^[a-z0-9_.:]{1,128}$",
             "default": "",
             "description": "user username",
         },
@@ -115,7 +115,7 @@ class User(Rest):
                     u.last_login = time.time()
                     u.save()
                     # create a new session for user
-                    sid = base64.b64encode(os.urandom(64))
+                    sid = base64.b64encode(os.urandom(64)).decode("ascii")
                     s = Session(username=u.username, role=u.role, session=sid, 
                                                             token_required=token_required)
                     if not s.save():
@@ -347,14 +347,14 @@ class Session(Rest):
         data["created"] = now
         data["timeout"] = s.session_timeout + now
         if data["token_required"]:
-            data["token"] = base64.b64encode("%s" % uuid.uuid4())
+            data["token"] = base64.b64encode(("%s" % uuid.uuid4()).encode()).decode("ascii")
         return data
 
     @classmethod
     @api_callback("after_create")
     def after_session_create(cls, data):
         # after each successful session creation, purge expired sessions
-        ret = Session.delete(_filters={"session":{"$lte":time.time()}})    
+        ret = Session.delete(_filters={"timeout":{"$lte":time.time()}})    
         if "count" in ret and ret["count"]>0:
             logger.debug("old sessions purged: %s", ret["count"])
         s = Session.load(username=data["username"], session=data["session"])

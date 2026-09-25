@@ -23,13 +23,13 @@ class Fabric(Rest):
             "type":str, 
             "default":"", 
             "key_sn": "fb",
-            "regex":"^[a-zA-Z0-9\-\.:_]{1,64}$",
+            "regex":"^[a-zA-Z0-9\\-\\.:_]{1,64}$",
             "description": "fabric name",
         },
         "apic_username":{
             "type":str, 
             "default":"admin",
-            "regex":"^[a-zA-Z0-9\-_\.@]{1,128}$",
+            "regex":"^[a-zA-Z0-9\\-_\\.@]{1,128}$",
             "description": "APIC username",
         },
         "apic_password":{
@@ -48,7 +48,7 @@ class Fabric(Rest):
             "description": "path to APIC private-key for cert-based authentication",
         },
         "ssh_username":{
-            "regex":"^[a-zA-Z0-9\-_\.@]{0,128}$",
+            "regex":"^[a-zA-Z0-9\\-_\\.@]{0,128}$",
             "default": "admin",
             "description": "username for ssh access to switch",
         },
@@ -249,7 +249,7 @@ class Fabric(Rest):
         try:
             controllers = []
             for o in objects:
-                attr = o.values()[0]["attributes"]
+                attr = list(o.values())[0]["attributes"]
                 if "role" in attr and attr["role"] == "controller":
                     if "state" in attr and attr["state"] == "in-service":
                         if "oobMgmtAddr" in attr and attr["oobMgmtAddr"]!="0.0.0.0":

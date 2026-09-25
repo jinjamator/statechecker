@@ -179,7 +179,7 @@ def get_attributes(session=None, dn=None, attribute=None, data=None):
         if type(obj) is not dict or len(obj)==0:
             logger.debug("unexpected format for obj: %s" % obj)
             continue
-        cname = obj.keys()[0]
+        cname = list(obj.keys())[0]
         if "attributes" not in obj[cname]:
             logger.debug("%s does not contain attributes: %s", cname, obj)
             continue
@@ -365,7 +365,9 @@ def execute_worker(arg_str, background=True):
     p = os.path.abspath(os.path.join(p, os.pardir))
     p = os.path.abspath(os.path.join(p, os.pardir))
     os.chdir(p)
-    cmd = "python -m app.models.aci.worker %s >%s 2>%s" % (arg_str,
+    # sys.executable, not "python": the interpreter running the app is the one
+    # with its dependencies, whatever else is first on the PATH.
+    cmd = "%s -m app.models.aci.worker %s >%s 2>%s" % (sys.executable, arg_str,
             stdout, stderr)
     if background: cmd = "%s &" % cmd
     try:
@@ -418,7 +420,7 @@ def run_command(cmd):
     logger.debug("run cmd: \"%s\"", cmd)
     try:
         out = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT)
-        return out
+        return out.decode("utf-8", errors="replace")
     except subprocess.CalledProcessError as e:
         logger.warn("error executing command: %s", e)
         logger.warn("stderr:\n%s", e.output)
@@ -432,13 +434,18 @@ def get_file_md5(path):
     if not os.path.exists(path):
         logger.debug("%s not found", path)
         return None
-    out = run_command("md5sum %s | egrep -o \"^[0-9a-fA-F]+\"" % path)
-    if out is None: return None
-    # expect 32-bit hex (128-bit number)
-    out = out.strip()
-    if re.search("^[0-9a-f]{32}$", out, re.IGNORECASE) is not None:
-        logger.debug("md5sum: %s", out)
-        return out
-    logger.warn("unexpected md5sum result: %s, returning None", out)
-    return None
+    # hashlib rather than a shell pipeline through md5sum: no quoting of the
+    # path, and no dependency on coreutils in the image.
+    import hashlib
+    h = hashlib.md5()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+    except (IOError, OSError) as e:
+        logger.warn("failed to read %s for md5: %s", path, e)
+        return None
+    out = h.hexdigest()
+    logger.debug("md5sum: %s", out)
+    return out
     

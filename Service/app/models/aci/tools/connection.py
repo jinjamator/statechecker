@@ -88,8 +88,8 @@ class Connection(object):
         if self.log is not None and self._log is None:
             # if self.log is a string, then attempt to open file pointer (do not catch exception, we want it
             # to die if there's an error opening the logfile)
-            if isinstance(self.log, str) or isinstance(self.log, unicode):
-                self._log = file(self.log, "a")
+            if isinstance(self.log, str) or isinstance(self.log, str):
+                self._log = open(self.log, "a")
             else:
                 self._log = self.log
             logging.debug("setting logfile to %s" % self._log.name)

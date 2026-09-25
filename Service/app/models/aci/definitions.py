@@ -54,7 +54,7 @@ class Definitions(Rest):
             "default": "default",
             "key": True,
             "key_index": 0,
-            "regex":"^[a-zA-Z0-9\-\.:_]{1,64}$",
+            "regex":"^[a-zA-Z0-9\\-\\.:_]{1,64}$",
             "description": "unique identifier for definition object",
         },
         "description":{

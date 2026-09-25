@@ -53,7 +53,7 @@ def get_db(uniq=False, overwrite_global=False):
             uri+= "connectTimeoutMS=%s&" % config["MONGO_CONNECT_TIMEOUT_MS"]
         if "MONGO_SOCKET_TIMEOUT_MS" in config:
             uri+= "socketTimeoutMS=%s&" % config["MONGO_SOCKET_TIMEOUT_MS"]
-        uri = re.sub("[\?&]+$","",uri)
+        uri = re.sub("[\\?&]+$","",uri)
         logger.debug("starting mongo connection: %s", uri)
         client = MongoClient(uri, w=w)
         if _g_db is None or overwrite_global: _g_db = client[db]
@@ -119,8 +119,9 @@ def setup_logger(logger, fname="utils.log", quiet=False, stdout=False,
 def get_user_data():
     """ returns user provided json or empty dict """
     try:
-        if not request.json: return {}
-        ret = request.json
+        # silent: Flask 2.1+ raises 415 on a non-JSON body instead of None
+        ret = request.get_json(silent=True)
+        if not ret: return {}
         if not isinstance(ret, dict): return {}
         return ret
     except Exception as e: return {}
@@ -155,7 +156,8 @@ def hash_password(p):
     """
     try:
         config = get_app_config()
-        return generate_password_hash(p,config["BCRYPT_LOG_ROUNDS"])
+        # bytes on Python 3; stored and compared as text, as it was on Python 2
+        return generate_password_hash(p,config["BCRYPT_LOG_ROUNDS"]).decode("utf-8")
     except Exception as e:
         logger.warn("failed to generate hash: %s" % e)
 
@@ -169,8 +171,8 @@ def aes_encrypt(data, **kwargs):
     try:
         if ekey is None: ekey = config["EKEY"]
         if eiv is None: eiv = config["EIV"]
-        ekey = ("%s" % ekey).decode("hex")
-        eiv = ("%s" % eiv).decode("hex")
+        ekey = bytes.fromhex("%s" % ekey)
+        eiv = bytes.fromhex("%s" % eiv)
         ec = AES.new(ekey, AES.MODE_CBC, eiv)
 
         # pad data to 16 bytes (each pad byte is length of padding)
@@ -179,7 +181,7 @@ def aes_encrypt(data, **kwargs):
         pad_count = 16-len(data)%16
         data += struct.pack("B", pad_count)*pad_count
         # need to store data as hex string, so always return hex string
-        edata = binascii.hexlify(ec.encrypt(data))
+        edata = binascii.hexlify(ec.encrypt(data)).decode("ascii")
         return edata
     except Exception as e:
         logger.error("aes_encrypt %s" % e)
@@ -196,18 +198,18 @@ def aes_decrypt(edata, **kwargs):
     try:
         if ekey is None: ekey = config["EKEY"]
         if eiv is None: eiv = config["EIV"]
-        ekey = ("%s" % ekey).decode("hex")
-        eiv = ("%s" % eiv).decode("hex")
+        ekey = bytes.fromhex("%s" % ekey)
+        eiv = bytes.fromhex("%s" % eiv)
         ec = AES.new(ekey, AES.MODE_CBC, eiv)
 
         # decrypt data hex string
-        data = ec.decrypt(edata.decode("hex"))
+        data = ec.decrypt(bytes.fromhex(edata))
         # need to remove padding from decrypted data - last byte should be
         # value between 0 and 15 representing number of characters to remove
-        last_byte = ord(data[-1])
+        last_byte = data[-1]
         if last_byte>0 and last_byte<=16 and len(data)>=last_byte:
             data = data[0:(len(data)-last_byte)]
-        return data
+        return data.decode("utf-8")
     except Exception as e:
         logger.error("aes_decrypt error %s" % e)
     return None
@@ -265,7 +267,7 @@ def list_routes(app, api=False):
     """ list all current app routes - debugging only
         http://flask.pocoo.org/snippets/117/
     """
-    import urllib
+    import urllib.request, urllib.parse, urllib.error
     from flask import url_for
     output = []
     for rule in app.url_map.iter_rules():
@@ -280,4 +282,4 @@ def list_routes(app, api=False):
     routes = sorted(output)
 
     if api: return routes
-    for line in routes: print line
+    for line in routes: print(line)

@@ -133,7 +133,7 @@ class Compare(Rest):
             "description": """ Compare only objects and attributes with 
                 severities greater than or equal to provided severity """,
             "default": "info",
-            "values": ManagedObjects.SEVERITY.keys(),
+            "values": list(ManagedObjects.SEVERITY.keys()),
         },
         "remap": {
             "type": bool,
@@ -170,7 +170,7 @@ class Compare(Rest):
         "definition":{
             "type":str,
             "default":"default",
-            "regex":"^[a-zA-Z0-9\-\.:_]{1,64}$",
+            "regex":"^[a-zA-Z0-9\\-\\.:_]{1,64}$",
             "description": """ perform comparision only on classes specified with definition file. 
             If empty or not found all classes within the snapshots will be compared.
             """
@@ -298,7 +298,7 @@ class Compare(Rest):
         """ after compare create start comparision background task """
         c = Compare.load(_id=data["_id"])
         if not c.exists():
-            abort(404, "compare (_id=%s) not found" % _id)
+            abort(404, "compare (_id=%s) not found" % data["_id"])
         c.start_compare()
 
 
@@ -470,7 +470,7 @@ def execute_compare(compare_id):
         js2 = get_json_data("%s/1/%s/definition.json" % (tmp, s2._id))
         if len(js1)==0: return fail("invalid definition in snapshot %s"%s1._id)
         if len(js2)==0: return fail("invalid definition in snapshot %s"%s2._id)
-        s1_classes = [cn for cn in js1["managed_objects"].keys()]
+        s1_classes = [cn for cn in list(js1["managed_objects"].keys())]
         managed_objects = {}
         for classname in js2["managed_objects"]:
             if classname not in s1_classes:
@@ -702,7 +702,7 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
         "remap": [],
     }
     if len(s2)>0:
-        for a in s2[s2.keys()[0]]:
+        for a in s2[list(s2.keys())[0]]:
             if len(mo["include"])>0 and a not in mo["include"]: continue
             elif len(mo["exclude"])>0 and a in mo["exclude"]: continue
             # no need to compare keys as already validated they match
@@ -724,7 +724,7 @@ def per_node_class_compare(compare,mo,file1,file2,remap1,remap2):
             # this is an interesting attribute to compare
             attributes[a] = attr
 
-    logger.debug("%s interesting attributes: %s", mo["classname"],attributes.keys())
+    logger.debug("%s interesting attributes: %s", mo["classname"],list(attributes.keys()))
 
     # check for modified and deleted
     for k in s1:
@@ -933,7 +933,7 @@ def endpoint_compare(compare, folder1, folder2, remap1, remap2):
 
     # walk through epmIpEp objects and add empty mac, bd, and encap
     # then walk through epmRsMacEpToIpEpAtt and add to corresponding epmIpEp
-    reg = "/bd-\[vxlan-(?P<bd>[0-9]+)\]/vx?lan-\[(?P<encap>vx?lan-[0-9]+)\]/"
+    reg = "/bd-\\[vxlan-(?P<bd>[0-9]+)\\]/vx?lan-\\[(?P<encap>vx?lan-[0-9]+)\\]/"
     reg+= "db-ep/mac-(?P<mac>[0-9A-Fa-f:]+)/rsmacEpToIpEpAtt-"
     s1_epmIpEp = {}
     s2_epmIpEp = {}

@@ -18,7 +18,7 @@ def db_is_alive():
     logger.debug("checking if db is alive")
     try:
         db = get_db()
-        logger.debug("collection names: %s", db.collection_names())
+        logger.debug("collection names: %s", db.list_collection_names())
         logger.debug("database is alive")
         return True
     except Exception as e: pass

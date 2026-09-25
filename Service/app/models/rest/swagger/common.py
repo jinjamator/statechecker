@@ -83,7 +83,7 @@ def swagger_generic_path(cls, path, method, summary, args=None, ret=None, authen
         cls._swagger[path][op]["responses"] = copy.deepcopy(generic_get)
     # if any attributes exists within path, add them as parameters
     path_params = []
-    for match in re.finditer("/([^-]+\-)?{(?P<a>[^}]+)}", path):
+    for match in re.finditer("/([^-]+\\-)?{(?P<a>[^}]+)}", path):
         if match.group("a") in cls._attributes:
             path_params.append(match.group("a"))
     cls._swagger[path][op]["parameters"] = build_swagger_parameters(cls, paths=path_params)

@@ -71,7 +71,8 @@ def get_cookies(test_client):
     # return dict of cookies indexed by cookie name for a flask test_client object
     ret = {}
     try:
-        for cookie in test_client.cookie_jar: ret[cookie.name] = cookie
+        # Werkzeug 2.3 replaced cookie_jar with its own Cookie objects
+        for cookie in test_client._cookies.values(): ret[cookie.key] = cookie
     except Exception as e:
         logger.warn("failed to extract cookies from test_client: %s", e)
     return ret
@@ -104,8 +105,8 @@ def test_api_logout_user_with_post(app, userprep):
     assert response.status_code == 200
 
     # manually set old, invalid session cookie to send on next call
-    logger.debug("%s, %s, %s", old_cookie.domain, old_cookie.name, old_cookie.value)
-    c.set_cookie(old_cookie.domain, old_cookie.name, old_cookie.value)
+    logger.debug("%s, %s, %s", old_cookie.domain, old_cookie.key, old_cookie.value)
+    c.set_cookie(old_cookie.key, old_cookie.value, domain=old_cookie.domain)
 
     # user should not be unauthenticated
     response = c.get(class_url)

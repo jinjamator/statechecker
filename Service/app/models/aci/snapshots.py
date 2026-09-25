@@ -45,7 +45,7 @@ def upload_snapshot():
             for filename in request.files:
                 f = request.files[filename] 
                 # validate file is .tgz file and allowed name
-                if not re.search("(?i)^[a-z0-9\-_\.:]+?\.tgz$", f.filename):
+                if not re.search("(?i)^[a-z0-9\\-_\\.:]+?\\.tgz$", f.filename):
                     abort(400, "Invalid filename for snapshot: %s" % f.filename)
                 logger.debug("upload request for file: %s", f.filename)
                 temp_filename = os.path.join(tmp_dir , f.filename)
@@ -86,10 +86,10 @@ def upload_snapshot():
                         abort(400, "fabric %s does not exist" % snap.fabric)
                     d = Definitions.load(definition=snap.definition)
                     if not d.exists():
-                        abort(400, "definition '%s' does not exist"  % data["definition"])
+                        abort(400, "definition '%s' does not exist"  % snap.definition)
                         # set a default description if one was not provided
                     if len(snap.description.strip()) == 0:
-                        snap.description = "%s.snapshot.%s" % (fabric,format_timestamp(time.time()))
+                        snap.description = "%s.snapshot.%s" % (snap.fabric,format_timestamp(time.time()))
                     snap.progress = 1.00
                     snap.status = 'complete'
                     snap.error = False
@@ -140,12 +140,12 @@ class Snapshots(Rest):
         "fabric":{
             "type":str, 
             "default":"", 
-            "regex":"^[a-zA-Z0-9\-\.:_]{1,64}$",
+            "regex":"^[a-zA-Z0-9\\-\\.:_]{1,64}$",
         },
         "definition":{
             "type":str,
             "default":"default",
-            "regex":"^[a-zA-Z0-9\-\.:_]{1,64}$",
+            "regex":"^[a-zA-Z0-9\\-\\.:_]{1,64}$",
         },
         "description":{
             "type":str,
@@ -279,7 +279,7 @@ def get_unique_filename(directory, filename):
     fname = ".".join([filename_no_ext, ext])
     while os.path.exists("%s/%s" % (directory, fname)):
         fname = ".".join([
-            "%s_%s" % (filename_no_ext,  base64.b64encode("%s" % uuid.uuid4())[:8]),
+            "%s_%s" % (filename_no_ext,  uuid.uuid4().hex[:8]),
             ext
         ])
     return fname
@@ -320,7 +320,7 @@ def execute_snapshot(snapshot_id):
     
     filename = "snapshot.%s.%s.tgz"% (s.fabric, format_timestamp(ts,msec=True))
     filename = get_unique_filename(dst, filename)
-    src = "%s/%s"%(src, re.sub("\.tgz$","", filename))
+    src = "%s/%s"%(src, re.sub("\\.tgz$","", filename))
 
     # update snapshot state with error message and error status
     def fail(msg="", cleanup=True):
@@ -364,7 +364,7 @@ def execute_snapshot(snapshot_id):
 
     # write dict data to specified path
     def json_write(path, data):
-        if not re.search("\.json$", path): path = "%s.json" % path
+        if not re.search("\\.json$", path): path = "%s.json" % path
         if not os.path.exists(os.path.dirname(path)): 
             os.makedirs(os.path.dirname(path))
         logger.debug("saving to %s" % (path))
@@ -473,7 +473,7 @@ def execute_snapshot(snapshot_id):
                                 # child has corresponding object. before child 
                                 # check, try to extract node-id (i.e., stats 
                                 # object node-id from original parent object)
-                                tc = c[c.keys()[0]]
+                                tc = c[list(c.keys())[0]]
                                 if "attributes" in tc and "dn" in tc["attributes"]:
                                     r = reg.search(tc["attributes"]["dn"])
                                     if r is not None: node = r.group("node")

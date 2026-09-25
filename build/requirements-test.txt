@@ -1,0 +1,9 @@
+-r requirements.txt
+# No pytest-flask: it keeps a request context pushed for each test, and since
+# Flask 2.2 the test client's requests share that context's `g`. Flask-Login
+# caches the user there, so an expired session or a missing CSRF token went
+# unnoticed and both auth tests passed a 200 they must refuse.
+pytest==9.1.1
+pluggy==1.6.0
+iniconfig==2.3.0
+Pygments==2.21.0

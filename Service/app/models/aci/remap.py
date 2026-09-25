@@ -24,7 +24,7 @@ class Remap(object):
         "tunnelIf",
     ]
     _vlan = [
-        "\[vlan[0-9]+\]",
+        "\\[vlan[0-9]+\\]",
         "^vlan[0-9]+,?$",
         ",vlan[0-9]+$",
         "^vlan-[0-9]+$",
@@ -32,8 +32,8 @@ class Remap(object):
     ]
     _vlan = "|".join(["(%s)"%v for v in _vlan])
     _encrtd = [
-        "eth[0-9]+/[0-9]+\.[0-9]+",
-        "po[0-9]+\.[0-9]+"
+        "eth[0-9]+/[0-9]+\\.[0-9]+",
+        "po[0-9]+\\.[0-9]+"
     ]
     _encrtd = "|".join(["(%s)"%v for v in _encrtd])
     REMAP_ORDERED = ["vlan", "encrtd", "agg", "loopback", "tunnel"]
@@ -87,7 +87,7 @@ class Remap(object):
                 t = self.remaps[r]
                 r1 = t[0].search(value)
                 if r1 is not None:
-                    match = re.sub("[\[\]\,]","",r1.group("v"))
+                    match = re.sub("[\\[\\]\\,]","",r1.group("v"))
                     if match in t[1]:
                         #logger.debug("matching(%s) %s",match,t[1][match])
                         value = t[0].sub(t[1][match], value)
@@ -102,7 +102,7 @@ class Remap(object):
             from file <path>/<classname>.json
         """
         if classname is None:
-            classname = re.sub("\.json$","", fname.split("/")[-1])
+            classname = re.sub("\\.json$","", fname.split("/")[-1])
         logger.debug("get object attributes for %s from %s"%(classname,fname))
         objects = []
         try:
@@ -129,14 +129,14 @@ class Remap(object):
                 js = json.load(f)
                 for o in js:
                     if type(o) is dict and len(o)>0:
-                        classname = o.keys()[0]
+                        classname = list(o.keys())[0]
                         if type(o[classname]) is dict and \
                             "attributes" in o[classname]:
                             if classname not in ret: ret[classname] = []
                             ret[classname].append(o[classname]["attributes"])
         except Exception as e:
             logger.info("failed to get objects from %s: %s" % (fname, e))
-        logger.debug("returning classes: %s" % ret.keys())
+        logger.debug("returning classes: %s" % list(ret.keys()))
         return ret
 
 
@@ -183,7 +183,7 @@ class Remap(object):
         enc=Remap.get_object_attributes("%s/%s.json"%(self.folder,"l3EncRtdIf"))
         for o in enc:
             if "id" in o and "encap" in o and "name" in o:
-                r1 = re.search("^(?P<if>eth[0-9]+/[0-9]+)\.[0-9]+", o["id"])
+                r1 = re.search("^(?P<if>eth[0-9]+/[0-9]+)\\.[0-9]+", o["id"])
                 if r1 is not None:
                     v = "%s.%s" % (r1.group("if"), o["encap"])
                 elif len(o["name"])>0 and re.search("^po[0-9]+", o["id"]):
@@ -206,13 +206,13 @@ class Remap(object):
         # first get list of loopbacks that we care about and parse vrf
         lo=Remap.get_object_attributes("%s/%s.json"%(self.folder,"l3LbRtdIf"))
         loopbacks = {}
-        reg = "sys/(inst|ctx)-(?P<vrf>(overlay-1)|(\[vxlan-[0-9]+\]))/"
+        reg = "sys/(inst|ctx)-(?P<vrf>(overlay-1)|(\\[vxlan-[0-9]+\\]))/"
         reg = re.compile(reg)
         for o in lo:
             if "id" in o and "dn" in o:
                 r1 = reg.search(o["dn"])
                 if r1 is not None:
-                    loopbacks[o["id"]] = re.sub("\[|\]","",r1.group("vrf"))
+                    loopbacks[o["id"]] = re.sub("\\[|\\]","",r1.group("vrf"))
                 else:
                     logger.warn("%s failed to parse loopback dn %s" % (
                         self.node_id, o["dn"]))

@@ -50,7 +50,7 @@ def aci_app_proxy():
     data = request.args.get("data", {})
     params = request.args.get("params", {})
     try:
-        user_json = request.json
+        user_json = request.get_json(silent=True)
         if user_json is not None:
             if "method" in user_json: method = user_json["method"]
             if "url" in user_json: url = user_json["url"]
@@ -69,11 +69,11 @@ def aci_app_proxy():
         except Exception as e: abort(400, "invalid value for 'params'")
 
     # validate url and methods
-    if type(method) is not str and type(method) is not unicode:
+    if type(method) is not str and type(method) is not str:
         abort(400, "invalid value for 'method'")
     if url is None:
         abort(400, "missing required attribute 'url'")
-    if type(url) is not str and type(url) is not unicode:
+    if type(url) is not str and type(url) is not str:
         abort(400, "invalid value for 'url'")
     if not re.search("^/", url):
         abort(400, "invalid value for 'url', must start with / character") 

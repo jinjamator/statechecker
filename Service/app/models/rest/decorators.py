@@ -3,7 +3,7 @@ from ..utils import get_user_data
 from .dependency import RestDependency
 from flask import abort
 from functools import wraps
-from swagger.common import (swagger_create, swagger_read, swagger_update,
+from .swagger.common import (swagger_create, swagger_read, swagger_update,
                             swagger_delete, swagger_generic_path)
 import copy
 import inspect
@@ -161,7 +161,7 @@ def api_route(authenticated = True, keyed_url = False, methods = None, path = No
         "swag_ret": swag_ret
     })
     def add_route_decorator(func):
-        spec = inspect.getargspec(func)
+        spec = inspect.getfullargspec(func)
         if len(spec.args)>0:
             start_index = 1
             if spec.args[0]=="self": route_info.is_self = True
@@ -178,7 +178,7 @@ def api_route(authenticated = True, keyed_url = False, methods = None, path = No
             if route_info.swag_args is None:
                 route_info.swag_args = [a[0] for a in route_info.args]
 
-        route_info.kwargs = (spec.keywords is not None)
+        route_info.kwargs = (spec.varkw is not None)
         if route_info.path is None: route_info.path = func.__name__
         if route_info.summary is None: route_info.summary = ""
         route_info.function = func
@@ -295,7 +295,7 @@ def register(api, uni=True):
         c._dependency = node
         c.init(force=True)
         # after class has been init, check for method route_info and callback_info
-        for name, method in c.__dict__.iteritems():
+        for name, method in c.__dict__.items():
             # route_info for normal bound methods on object
             if hasattr(method, "route_info"): 
                 c._access["routes"].append(method.route_info)
@@ -379,7 +379,7 @@ def register(api, uni=True):
             # /_classname-{_id} for the _id key
             # else, the key_path will already include the classname and we should just use /{_id}
             if parent is not None or c._access["keyed_path"]:
-                cname = re.sub("\.","/", c._classname)
+                cname = re.sub("\\.","/", c._classname)
                 key_path = re.sub("//", "/", "%s/%s-%s" % (key_path, cname, "<string:_id>"))
             else:
                 key_path = re.sub("//", "/", "%s/%s" % (key_path, "<string:_id>"))
@@ -555,7 +555,7 @@ class RouteInfo(object):
                         break
 
         # force role to a valid value
-        if isinstance(self.role, basestring) and self.role in RouteInfo.allowed_role:
+        if isinstance(self.role, str) and self.role in RouteInfo.allowed_role:
             self.role = cls._access[self.role]
         elif not isinstance(self.role, int):
             self.role = cls._access["default_role"]
@@ -675,7 +675,7 @@ class CallbackInfo(object):
         "after_delete"
     ]
     def __init__(self, callback=None, function=None):
-        if not isinstance(callback, basestring) or callback not in CallbackInfo.allowed_callbacks:
+        if not isinstance(callback, str) or callback not in CallbackInfo.allowed_callbacks:
             raise Exception("invalid callback type: %s" % callback)
         if function is None or not callable(function):
             raise Exception("invalid function(%s) for callback %s" % (function, callback))
@@ -692,8 +692,8 @@ class CallbackInfo(object):
         # we will support function accepting arg with same name as callback kwargs keys, just kwargs
         # dict, or mix. Only the args function requests will be provided.  If an unsupported arg is
         # present then an exception is raised
-        spec = inspect.getargspec(self.function)
-        self.kwargs = (spec.keywords is not None)
+        spec = inspect.getfullargspec(self.function)
+        self.kwargs = (spec.varkw is not None)
         if len(spec.args)>0:
             start_index = 1
             if spec.args[0]=="cls": self.is_cls = True

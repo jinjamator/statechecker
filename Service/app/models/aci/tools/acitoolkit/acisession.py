@@ -43,7 +43,7 @@ import sys
 from collections import namedtuple
 
 if sys.version_info < (3, 0, 0):
-    from urllib import unquote
+    from urllib.parse import unquote
 else:
     from urllib.parse import unquote
 
@@ -51,7 +51,7 @@ try:
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 except ImportError:
     pass
-from six.moves.queue import Queue
+from queue import Queue
 from websocket import create_connection, WebSocketException
 from requests.exceptions import ConnectionError
 try:
@@ -465,26 +465,26 @@ class Session(object):
         directly to the Requests library
 
         """
-        if not isinstance(url, basestring):
+        if not isinstance(url, str):
             url = str(url)
-        if not isinstance(uid, basestring):
+        if not isinstance(uid, str):
             uid = str(uid)
-        if not isinstance(pwd, basestring):
+        if not isinstance(pwd, str):
             pwd = str(pwd)
-        if not isinstance(url, basestring):
+        if not isinstance(url, str):
             raise CredentialsError("The URL or APIC address must be a string")
-        if not isinstance(uid, basestring):
+        if not isinstance(uid, str):
             raise CredentialsError("The user ID must be a string")
         if (pwd == None or pwd == 'None') and not cert_name and not key:
             raise CredentialsError("An authentication method must be provided")
         if pwd:
-            if not isinstance(pwd, basestring):
+            if not isinstance(pwd, str):
                 raise CredentialsError("The password must be a string")
         if cert_name:
-            if not isinstance(cert_name, basestring):
+            if not isinstance(cert_name, str):
                 raise CredentialsError("The certificate name must be a string")
         if key:
-            if not isinstance(key, basestring):
+            if not isinstance(key, str):
                 raise CredentialsError("The key path must be a string")
         if (cert_name and not key) or (not cert_name and key):
                 raise CredentialsError("Both a certificate name and private key must be provided")
